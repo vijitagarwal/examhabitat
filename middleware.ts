@@ -2,12 +2,14 @@ import { createServerClient, type SetAllCookies } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import { env } from "@/lib/env"
 import type { Database } from "@/lib/supabase/database.types"
+import { supabaseFetch } from "@/lib/supabase/fetch"
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
   response.headers.set("Cache-Control", "private, no-store")
   if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return response
   const supabase = createServerClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    global: { fetch: supabaseFetch },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: ((cookies, headers) => {

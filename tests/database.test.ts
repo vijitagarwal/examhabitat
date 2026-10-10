@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { workspaceSchema } from "@/lib/workspace"
 import { catTopics } from "@/lib/cat-syllabus"
+import { getReviewDueOn } from "@/lib/progress"
 
 const userA = "00000000-0000-4000-8000-000000000001"
 const userB = "00000000-0000-4000-8000-000000000002"
@@ -72,6 +73,17 @@ describe("PostgreSQL migration, RLS and atomic writes (local PGlite)", () => {
     await mutate("progress", progress, 0)
     await expect(mutate("progress", { ...progress, minutesStudied: 20 }, 0)).rejects.toMatchObject({ code: "40001" })
   })
+  it("does not postpone review or claim more study when only priority changes", async () => {
+    const first = await mutate("progress", progress, 0)
+    const second = await mutate("progress", { ...progress, priority: 5, minutesStudied: 0 }, 1)
+    expect(second.progress[0]).toMatchObject({ accumulatedMinutes: 25, lastStudiedAt: first.progress[0].lastStudiedAt, reviewDueOn: first.progress[0].reviewDueOn })
+    expect(first.progress[0].reviewDueOn).toBe(getReviewDueOn("learning", 2, first.today))
+  })
+  it("rejects a changed payload under the same retry ID", async () => {
+    const request = randomUUID()
+    await mutate("progress", progress, 0, request)
+    await expect(mutate("progress", { ...progress, minutesStudied: 40 }, 0, request)).rejects.toMatchObject({ code: "22023" })
+  })
   it("keeps preferences and progress private through RLS", async () => {
     await mutate("progress", progress, 0)
     await mutate("preferences", { preferences }, 1)
@@ -110,7 +122,64 @@ describe("PostgreSQL migration, RLS and atomic writes (local PGlite)", () => {
   it("denies completing another user's task", async () => {
     const data = await mutate("plan", await planPayload(), 0)
     await asUser(userB)
+    expect((await db.query("select * from public.study_plans")).rows).toEqual([])
+    expect((await db.query("select * from public.study_plan_tasks")).rows).toEqual([])
+    expect((await db.query("select * from public.cat_mutation_receipts")).rows).toEqual([])
     await expect(mutate("task", { taskId: data.plans[0].tasks[0].id, status: "completed" }, 0)).rejects.toMatchObject({ code: "42501" })
+  })
+  it("makes repeated plan requests safe and preserves in-progress and skipped tasks", async () => {
+    const payload = await planPayload()
+    const request = randomUUID()
+    const created = await mutate("plan", payload, 0, request)
+    expect((await mutate("plan", payload, 0, request)).plans[0].id).toBe(created.plans[0].id)
+    const [first, second] = created.plans[0].tasks
+    await mutate("task", { taskId: first.id, status: "in_progress" }, 1)
+    await mutate("task", { taskId: second.id, status: "skipped" }, 2)
+    const regenerated = await mutate("plan", { ...payload, tasks: [] }, 3)
+    expect(regenerated.plans[0].tasks.map((t) => t.id)).toEqual([first.id, second.id])
+    expect(regenerated.plans[0].totalMinutes).toBe(35)
+  })
+  it("retains the old queue and settings if regeneration fails after writes begin", async () => {
+    const payload = await planPayload()
+    const created = await mutate("plan", payload, 0)
+    await db.exec("savepoint regeneration")
+    await expect(mutate("plan", { ...payload, preferences: { ...preferences, dailyMinutes: 15 } }, 1)).rejects.toThrow()
+    await db.exec("rollback to savepoint regeneration")
+    const after = await snapshot()
+    expect(after.plans).toEqual(created.plans)
+    expect(after.preferences).toEqual(created.preferences)
+    expect(after.revision).toBe(created.revision)
+  })
+  it("rejects a stale plan after a task completed without losing completion history", async () => {
+    const payload = await planPayload()
+    const created = await mutate("plan", payload, 0)
+    const completed = await mutate("task", { taskId: created.plans[0].tasks[0].id, status: "completed" }, 1)
+    await db.exec("savepoint stale")
+    await expect(mutate("plan", payload, 1)).rejects.toMatchObject({ code: "40001" })
+    await db.exec("rollback to savepoint stale")
+    expect((await snapshot()).plans).toEqual(completed.plans)
+  })
+  it("does not let finished tasks return to an unfinished state", async () => {
+    const created = await mutate("plan", await planPayload(), 0)
+    const taskId = created.plans[0].tasks[0].id
+    await mutate("task", { taskId, status: "completed" }, 1)
+    await expect(mutate("task", { taskId, status: "in_progress" }, 2)).rejects.toMatchObject({ code: "40001" })
+  })
+  it("rejects invalid time zones without persisting preferences", async () => {
+    await db.exec("savepoint timezone")
+    await expect(mutate("preferences", { preferences: { ...preferences, timezone: "invalid/zone" } }, 0)).rejects.toThrow()
+    await db.exec("rollback to savepoint timezone")
+    expect((await snapshot()).revision).toBe(0)
+    expect((await snapshot()).preferences.timezone).toBe("Asia/Kolkata")
+  })
+  it("keeps progress when a referenced topic cannot be removed", async () => {
+    await mutate("progress", progress, 0)
+    await db.exec("reset role")
+    await db.exec("savepoint catalog")
+    await expect(db.query("delete from public.syllabus_topics where id = $1", [progress.topicId])).rejects.toMatchObject({ code: "23001" })
+    await db.exec("rollback to savepoint catalog")
+    await asUser(userA)
+    expect((await snapshot()).progress[0].topicId).toBe(progress.topicId)
   })
   it("rejects duplicate tasks and budget overflow as a whole transaction", async () => {
     const payload = await planPayload()

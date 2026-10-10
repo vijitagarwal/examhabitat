@@ -52,7 +52,7 @@ The browser submits a request UUID and expected workspace revision, never an own
 
 Plan calculation uses a single consistent snapshot, then a revision-checked atomic save. Completion racing generation therefore invalidates the stale plan. A failure after an insert rolls back preferences, tasks and plan changes together. The UI is persistence-first, retains editable input on failure, and updates only from a validated saved snapshot. A lost response can be retried or checked by reloading. A plan retry may require reload after its original save advanced the revision; it never erases completed work or silently creates a duplicate plan.
 
-`read_cat_workspace` returns a single statement snapshot of catalog, preferences, progress and the latest 14 planning days. Older records stay stored. Pages are dynamic/private, with no shared personalized-data cache.
+`read_cat_workspace` returns a single statement snapshot of catalog, preferences, progress and the latest 14 planning days. Older records stay stored. Pages are dynamic/private, with no shared personalized-data cache. Successful server actions invalidate all three dashboard route caches. Each Supabase network request has a 20-second timeout and preserves caller cancellation; SDK retries may extend total operation time.
 
 ## Verification boundaries
 

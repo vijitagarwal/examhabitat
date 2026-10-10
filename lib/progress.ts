@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { addDays, dateSchema, isDateDue, isValidTimeZone } from "@/lib/dates"
+import { addDays, dateSchema, isValidTimeZone } from "@/lib/dates"
 import type { CatSectionCode, CatSyllabusTopic } from "@/lib/cat-syllabus"
 
 export const topicStatusSchema = z.enum(["not_started", "learning", "practising", "needs_revision", "mastered"])
@@ -138,8 +138,4 @@ export function aggregateProgress(topics: CatSyllabusTopic[], progressByTopic: R
     })(),
     sectionSummaries: summaries,
   }
-}
-
-export function isWeakOrDue(progress: TopicProgress, referenceDate: string) {
-  return progress.status === "needs_revision" || progress.confidence <= 2 || isDateDue(progress.reviewDueOn, referenceDate)
 }
