@@ -4,7 +4,8 @@ import { env } from "@/lib/env"
 import type { Database } from "@/lib/supabase/database.types"
 
 export async function GET(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/dashboard", request.url))
+  // Fixed relative destinations preserve the request host through dev/proxy normalization.
+  const response = new NextResponse(null, { status: 303, headers: { Location: "/dashboard" } })
   response.headers.set("Cache-Control", "private, no-store")
   const code = request.nextUrl.searchParams.get("code")
   if (code && env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     } catch { /* Never log auth codes or tokens. */ }
   }
   // Destination is fixed. No user-supplied redirect/next URL is accepted.
-  const failure = NextResponse.redirect(new URL("/auth?link=expired", request.url))
+  const failure = new NextResponse(null, { status: 303, headers: { Location: "/auth?link=expired" } })
   failure.headers.set("Cache-Control", "private, no-store")
   return failure
 }
