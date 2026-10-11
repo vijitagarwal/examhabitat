@@ -4,7 +4,7 @@ import type { ActionFailureCode } from "@/lib/workspace"
 import type { PracticeQuestion } from "@/lib/practice"
 
 export function PracticeLinks() {
-  return <nav aria-label="Practice navigation" className="mb-6 flex flex-wrap gap-4 text-sm font-semibold text-accent"><Link className="min-h-11 py-3 underline" href="/dashboard/practice">Question bank & setup</Link><Link className="min-h-11 py-3 underline" href="/dashboard/practice/history">Attempt history</Link><Link className="min-h-11 py-3 underline" href="/dashboard/practice/mistakes">Mistake review</Link></nav>
+  return <nav aria-label="Practice navigation" className="mb-6 flex flex-wrap gap-4 text-sm font-semibold text-accent"><Link className="min-h-11 py-3 underline" href="/dashboard/practice">Question bank & setup</Link><Link className="min-h-11 py-3 underline" href="/dashboard/performance">Performance</Link><Link className="min-h-11 py-3 underline" href="/dashboard/practice/history">Attempt history</Link><Link className="min-h-11 py-3 underline" href="/dashboard/practice/mistakes">Mistake review</Link></nav>
 }
 export function PracticeFailure({ code, message }: { code: ActionFailureCode; message: string }) {
   return <WorkspaceState kind={code === "not_configured" || code === "unauthenticated" ? code : "error"} message={message} />

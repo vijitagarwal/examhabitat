@@ -46,6 +46,7 @@ export function DashboardOverview({ data }: { data: CatWorkspaceData }) {
         <p className="text-xs font-semibold uppercase tracking-wider text-accent">{task.status.replace("_", " ")}</p><h3 className="mt-3 font-semibold">{topics.get(task.topicId)?.title ?? "Archived topic"}</h3><p className="mt-2 text-sm leading-6 text-muted">{task.plannedMinutes} min · {task.reason}</p>
       </li>)}</ol> : <div className="mt-6 rounded-xl bg-accent-soft p-5"><p className="font-medium text-accent-strong">Start with one realistic study block.</p><p className="mt-2 text-sm leading-6 text-muted">Set your daily budget and build a queue when you are ready. No practice history or mastery is assumed.</p></div>}
     </section>
+    <section className="panel mt-8"><p className="eyebrow">Performance intelligence</p><h2 className="mt-2 text-xl font-semibold">Turn submitted practice into your next decision.</h2><p className="mt-3 max-w-2xl leading-7 text-muted">Accuracy, section evidence, topic recurrence and honest sample-size labels are calculated from finalized attempts only.</p><Button href="/dashboard/performance" variant="secondary" className="mt-5">Open performance view<ArrowRight className="ml-2 size-4" /></Button></section>
     <p className="mt-8 text-xs leading-5 text-muted">{data.catalog.disclaimer}</p>
     <p className="mt-3 text-xs leading-5 text-muted">Progress is a self-reported learning index, not an exam-readiness score. Learning 30%, practising 60%, revision 45%, mastery 84–100% depending on confidence.</p>
   </>

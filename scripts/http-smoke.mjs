@@ -19,7 +19,7 @@ try {
     if (server.exitCode !== null || server.signalCode !== null || Date.now() > deadline) throw new Error(`Isolated Next server did not start on port 3101 after ${Date.now() - started}ms (exit=${server.exitCode}, signal=${server.signalCode}).\n${output}`)
     await new Promise((resolve) => setTimeout(resolve, 150))
   }
-  for (const path of ["/dashboard", "/dashboard/syllabus", "/dashboard/plan"]) {
+  for (const path of ["/dashboard", "/dashboard/syllabus", "/dashboard/plan", "/dashboard/performance"]) {
     const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(60_000) })
     assert.equal(response.status, 200)
     assert.match(await response.text(), /Connect your saved workspace/)
@@ -32,7 +32,7 @@ try {
   assert.match(await auth.text(), /This link could not be verified/)
   const landing = await fetch(origin)
   assert.match(await landing.text(), /42 curated topics/)
-  console.log("HTTP smoke passed: 3 private setup routes, fixed callback redirect, auth recovery, and landing page.")
+  console.log("HTTP smoke passed: 4 private setup routes, fixed callback redirect, auth recovery, and landing page.")
 } finally {
   if (server.pid && server.exitCode === null) {
     // Only terminate this test's child tree; Next dev forks its own server on Windows.

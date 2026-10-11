@@ -4,6 +4,7 @@ import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto"
 import { readFile } from "node:fs/promises"
 import { randomUUID } from "node:crypto"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { rawAnalyticsSchema } from "@/lib/analytics"
 import { attemptSchema, bankSchema, historySchema, mistakesSchema, scoreAnswers, type ScoringItem } from "@/lib/practice"
 
 const A = "00000000-0000-4000-8000-000000000001", B = "00000000-0000-4000-8000-000000000002"
@@ -23,7 +24,7 @@ beforeAll(async () => {
   await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema public,auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;`)
-  for (const name of ["0001_foundation", "0002_cat_syllabus_progress_plans", "0003_atomic_cat_workspace", "0004_cat_practice_engine", "0005_original_cat_practice", "0006_practice_aware_planning"]) {
+  for (const name of ["0001_foundation", "0002_cat_syllabus_progress_plans", "0003_atomic_cat_workspace", "0004_cat_practice_engine", "0005_original_cat_practice", "0006_practice_aware_planning", "0007_practice_performance_intelligence"]) {
     await db.exec(await readFile(new URL(`../supabase/migrations/${name}.sql`, import.meta.url), "utf8"))
   }
   await db.query("insert into auth.users values ($1),($2)", [A, B])
@@ -164,5 +165,32 @@ describe("actual practice migrations, ownership and atomic scoring", () => {
     const expected = ["B","C","A","D","C","A","3","A","B",String(60+75+100),"C",String(235*1.2),"B","2","D","C",
       String(1200*1.2*0.75),"C",String((5*18-22)/4),"B",String(36/5),String(6/30*100),"C",String(10**2-2*21),"A",String(5+11*4),"B",String(2*22),"C",String(12*180/36),String(6*5/2),String(3/5*2/4)]
     expect(rows.map((r) => r.answer_key)).toEqual(expected)
+  })
+  it("returns empty evidence without division errors and excludes active attempts from finalized metrics", async () => {
+    const empty = rawAnalyticsSchema.parse(await rpc("read_practice_analytics", [90]))
+    expect(empty).toMatchObject({ startedAttempts: 0, finalizedAttempts: 0, activeAttempts: 0, completionRate: null, overall: { answeredQuestions: 0, accuracy: null }, sections: [], topics: [] })
+    await start()
+    const active = rawAnalyticsSchema.parse(await rpc("read_practice_analytics", [90]))
+    expect(active).toMatchObject({ startedAttempts: 1, finalizedAttempts: 0, activeAttempts: 1, completionRate: 0, overall: { totalQuestions: 0, accuracy: null } })
+  })
+  it("aggregates only finalized answers by section/topic, preserves snapshot attribution and marks comparable score history", async () => {
+    const first = await start(); await command(first.id, 0, "submit", "cat-p-017", "1080")
+    const second = await start(); await command(second.id, 0, "submit", "cat-p-017", "1")
+    const analytics = rawAnalyticsSchema.parse(await rpc("read_practice_analytics", [90]))
+    expect(analytics).toMatchObject({ startedAttempts: 2, finalizedAttempts: 2, activeAttempts: 0, completionRate: 100,
+      overall: { totalQuestions: 4, answeredQuestions: 2, correct: 1, incorrect: 1, unanswered: 2, accuracy: 50 } })
+    expect(analytics.sections).toEqual([expect.objectContaining({ section: "QA", attempts: 2, answeredQuestions: 2, correct: 1, incorrect: 1 })])
+    expect(analytics.topics).toEqual(expect.arrayContaining([expect.objectContaining({ topicId: "cat-qa-arithmetic-percentages", incorrectAttempts: 1, recentAnsweredQuestions: 2, recentCorrect: 1, lastPractisedAt: expect.any(String) })]))
+    expect(analytics.scoreHistory).toHaveLength(2)
+    expect(analytics.scoreHistory.every((entry) => entry.comparableToLatest)).toBe(true)
+    expect(analytics.timing.attemptsWithTiming).toBe(2)
+  })
+  it("does not expose another user's analytics and does not double count an idempotent submission", async () => {
+    const first = await start(); const request = randomUUID()
+    await command(first.id, 0, "submit", "cat-p-017", "1080", false, request)
+    await command(first.id, 0, "submit", "cat-p-017", "1080", false, request)
+    expect(rawAnalyticsSchema.parse(await rpc("read_practice_analytics", [90])).finalizedAttempts).toBe(1)
+    await user(B)
+    expect(rawAnalyticsSchema.parse(await rpc("read_practice_analytics", [90]))).toMatchObject({ startedAttempts: 0, finalizedAttempts: 0, sections: [], topics: [] })
   })
 })

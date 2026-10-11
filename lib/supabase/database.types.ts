@@ -13,6 +13,7 @@ export type Database = {
       mark_practice: { Args: { p_question: string; p_attempt: string | null; p_mark: boolean }; Returns: boolean }
       practice_history: { Args: { p_page: number; p_review: boolean; p_unreviewed: boolean }; Returns: Json }
       practice_signals: { Args: Record<string, never>; Returns: Json }
+      read_practice_analytics: { Args: { p_days: number }; Returns: Json }
       read_cat_workspace: { Args: Record<string, never>; Returns: Json }
       mutate_cat_workspace: {
         Args: { p_request_id: string; p_expected_revision: number; p_operation: string; p_payload: Json }

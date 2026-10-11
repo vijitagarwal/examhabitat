@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 test.skip(process.env.CAT_E2E_AUTH === "1", "This suite tests the intentionally unconfigured app.")
 test("unconfigured routes expose setup, never private demo data", async ({ page }) => {
-  for (const path of ["/dashboard", "/dashboard/syllabus", "/dashboard/plan"]) {
+  for (const path of ["/dashboard", "/dashboard/syllabus", "/dashboard/plan", "/dashboard/performance"]) {
     await page.goto(path)
     await expect(page.getByRole("heading", { name: "Connect your saved workspace" })).toBeVisible()
     await expect(page.getByText("Demo workspace")).toHaveCount(0)

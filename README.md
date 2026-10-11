@@ -12,6 +12,7 @@ A CAT preparation workspace built with Next.js 15, React 19, TypeScript, Tailwin
 - Explanations for scheduled tasks, explicit start/complete/skip, and regeneration that retains finished and in-progress work.
 - Recent plan history, persistence-first forms, retry receipts and stale-write protection.
 - An original 32-question CAT practice bank, shared VARC/DILR material, untimed practice, server-deadline timed sessions, persistent answers, deterministic scoring, results, bookmarks, attempt history and mistake review.
+- A 90-day performance-intelligence view derived from finalized attempts: section/topic accuracy, evidence labels, score comparability, timing summaries, trends, and explainable practice recommendations.
 
 The catalog is curated, **not an official or exhaustive CAT syllabus**. Progress is self-reported, not predicted CAT performance. Task completion confirms an estimated block; it does not infer mastery. Practice questions are original ExamHabitat material, not official CAT questions. The practice policy is an explicitly labelled sample policy, not a universal CAT marking claim.
 
@@ -41,8 +42,9 @@ Apply migrations **in filename order** using a development Supabase SQL editor o
 4. `supabase/migrations/0004_cat_practice_engine.sql`
 5. `supabase/migrations/0005_original_cat_practice.sql`
 6. `supabase/migrations/0006_practice_aware_planning.sql`
+7. `supabase/migrations/0007_practice_performance_intelligence.sql`
 
-Apply all six before using the feature. They are ordered, one-time migrations. The catalog and question seeds are ID-based and duplicate-safe. No script automatically applies these to any external service.
+Apply all seven before using the feature. They are ordered, one-time migrations. The catalog and question seeds are ID-based and duplicate-safe. No script automatically applies these to any external service.
 
 In Supabase Auth, configure email delivery and allow `http://localhost:3000/auth/callback` as a redirect URL. For local browser integration tests also allow `http://127.0.0.1:3100/auth/callback`. Open a magic link in the browser that requested it (PKCE).
 
@@ -63,7 +65,7 @@ npm run build
 npm run start
 ```
 
-`npm test` includes domain, component, mocked HTTP/server-boundary, practice/scoring, and **embedded PostgreSQL** tests. `@electric-sql/pglite` runs the actual migrations in memory with local test roles and an `auth.uid()` stand-in. No credentials, Docker, external database or persistent test data is required. SQL/RLS tests do not prove hosted Supabase Auth, PostgREST configuration or multi-connection contention behavior.
+`npm test` includes domain, component, mocked HTTP/server-boundary, practice/scoring, performance-intelligence, and **embedded PostgreSQL** tests. `@electric-sql/pglite` runs the actual migrations in memory with local test roles and an `auth.uid()` stand-in. No credentials, Docker, external database or persistent test data is required. SQL/RLS tests do not prove hosted Supabase Auth, PostgREST configuration or multi-connection contention behavior.
 
 Useful focused commands:
 
@@ -74,7 +76,7 @@ npm test -- tests/workspace-ui.test.tsx
 npm run test:http
 ```
 
-`test:http` starts an isolated development server on port 3101, explicitly blanks Supabase configuration, verifies protected setup pages/cache headers and fixed callback recovery, then stops its own process. Do not run it simultaneously with another Next dev/build process in this workspace. It does not exercise client-side browser interactions.
+`test:http` starts an isolated development server on port 3101, explicitly blanks Supabase configuration, verifies four protected setup pages/cache headers and fixed callback recovery, then stops its own process. Do not run it simultaneously with another Next dev/build process in this workspace. It does not exercise client-side browser interactions.
 
 ### Optional Playwright tests
 
@@ -100,6 +102,7 @@ Then run `npm run test:e2e`. The runner refuses a non-loopback Supabase URL. Tes
 ## Design and data integrity
 
 See [CAT_WORKSPACE.md](docs/CAT_WORKSPACE.md) for the catalog/version policy, schema, RLS, transition rules, progress index, planner weights, timezone handling, regeneration and failure semantics. See [CAT_PRACTICE.md](docs/CAT_PRACTICE.md) for question content, answer-key protection, attempt lifecycle, scoring, deadlines and mistake review.
+See [CAT_PERFORMANCE.md](docs/CAT_PERFORMANCE.md) for metric denominators, finalized-attempt rules, evidence thresholds, score comparability, and recommendation behavior.
 
 Key modules:
 
@@ -109,6 +112,7 @@ Key modules:
 - `app/dashboard/actions.ts`: server-action entry points; never accepts ownership from the browser.
 - `components/workspace/`: persisted dashboard, syllabus editor and study planner.
 - `lib/practice.ts`, `lib/server/practice.ts`, `components/practice/`, and `app/dashboard/practice/`: bounded question discovery, persistent sessions, timed attempts, results and mistake review.
+- `lib/analytics.ts`, `lib/server/analytics.ts`, `components/analytics/`, and `app/dashboard/performance/`: finalized-attempt performance intelligence and explainable recommendations.
 - `supabase/migrations/`: constraints, RLS, seeds and atomic RPCs.
 
 The small handwritten `Database` type exposes only the two RPCs used by the application; it is not presented as generated table types. Runtime snapshots are validated and tested against the real migration output. The Supabase SSR/client versions are pinned as a compatible pair after the foundation's older SSR declarations failed typed persistence checks.
@@ -117,4 +121,4 @@ The small handwritten `Database` type exposes only the two RPCs used by the appl
 
 No development Supabase credentials were supplied. Hosted email delivery, live cookie refresh, cloud persistence through PostgREST and real-browser accessibility/responsiveness remain unverified. The SQL persistence and RLS checks run in embedded PostgreSQL; the UI/server tests use isolated fixtures/transports.
 
-Plans show the latest 14 planning days; older records remain stored. There is no realtime cross-tab subscription: stale submissions are rejected and the user can reload. Practice receipts are retained with attempts for retry safety. Catalog and question evolution require explicit migrations and mapping review. Practice evidence is a bounded planner signal after at least three answered attempts with at least 50% incorrect; it never overwrites manual topic status or mastery. The next integration gate is a disposable local Supabase + Chromium run for the authenticated practice workflow.
+Plans show the latest 14 planning days; older records remain stored. There is no realtime cross-tab subscription: stale submissions are rejected and the user can reload. Practice receipts are retained with attempts for retry safety. Catalog and question evolution require explicit migrations and mapping review. Performance uses a 90-day window by default, excludes active attempts, and never produces percentiles. Practice evidence is a bounded planner signal after at least three answered attempts with at least 50% incorrect; it never overwrites manual topic status or mastery. The next integration gate is a disposable local Supabase + Chromium run for the authenticated practice and performance workflow.

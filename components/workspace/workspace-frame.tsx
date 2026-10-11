@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, CalendarDays, LogOut, Menu, Target, X, ListChecks } from "lucide-react"
+import { BookOpen, CalendarDays, LogOut, Menu, Target, X, ListChecks, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { useRef, useState, type ReactNode } from "react"
 import { BrandMark } from "@/components/brand-mark"
@@ -11,6 +11,7 @@ const links = [
   { href: "/dashboard/syllabus", label: "Syllabus", icon: BookOpen },
   { href: "/dashboard/plan", label: "Study plan", icon: CalendarDays },
   { href: "/dashboard/practice", label: "Practice & tests", icon: ListChecks },
+  { href: "/dashboard/performance", label: "Performance", icon: TrendingUp },
 ]
 
 export function WorkspaceFrame({ activePath, children, signedIn = false }: { activePath: string; children: ReactNode; signedIn?: boolean }) {
