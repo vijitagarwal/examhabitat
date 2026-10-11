@@ -4,7 +4,7 @@ import type { Database } from "@/lib/supabase/database.types"
 import { workspaceSchema } from "@/lib/workspace"
 
 test.skip(process.env.CAT_E2E_AUTH !== "1", "Requires local Supabase and a fresh disposable local account.")
-test("saved progress survives reload, then a generated block can be completed", async ({ page, context }) => {
+test("saved workspace, practice, results, retry and timed deadline survive real browser navigation", async ({ page, context }) => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
   expect(["127.0.0.1", "localhost", "[::1]"]).toContain(new URL(url).hostname)
   const cookies: Array<Parameters<typeof context.addCookies>[0][number]> = []
@@ -44,6 +44,44 @@ test("saved progress survives reload, then a generated block can be completed", 
   await expect(page.getByText("Task status saved.")).toBeVisible()
   await page.reload()
   await expect(page.getByText("completed", { exact: true })).toBeVisible()
+  await page.goto("/dashboard/practice")
+  await expect(page.getByRole("heading", { name: "Practise with a purpose." })).toBeVisible()
+  await page.getByRole("button", { name: "Start session" }).click()
+  await expect(page.getByRole("heading", { name: /Question 1 of/ })).toBeVisible()
+  const firstAttemptUrl = page.url()
+  await page.getByRole("radio").first().check()
+  await page.getByRole("button", { name: "Save answer" }).click()
+  await expect(page.getByText("Answer saved to your account.")).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole("button", { name: /Question 1, answered/ })).toBeVisible()
+  await page.getByRole("button", { name: "Submit attempt" }).click()
+  await page.getByRole("button", { name: "Confirm submission" }).click()
+  await expect(page.getByRole("heading", { name: "Your practice result" })).toBeVisible()
+  await expect(page.getByText("Review answers")).toBeVisible()
+  await expect(page.getByRole("link", { name: "All mistakes" })).toBeVisible()
+  const retryButton = page.getByRole("button", { name: "Start session" })
+  if (await retryButton.count()) {
+    await retryButton.click()
+    await expect(page.getByRole("heading", { name: /Question 1 of/ })).toBeVisible()
+    expect(page.url()).not.toBe(firstAttemptUrl)
+    await page.getByRole("button", { name: "Submit attempt" }).click()
+    await page.getByRole("button", { name: "Confirm submission" }).click()
+    await expect(page.getByRole("heading", { name: "Your practice result" })).toBeVisible()
+  }
+  await page.goto("/dashboard/performance")
+  await expect(page.getByRole("heading", { name: "Know what the work is showing." })).toBeVisible()
+  await expect(page.getByText("Finalized attempts")).toBeVisible()
+  await page.goto("/dashboard/practice")
+  await page.getByRole("combobox", { name: "Mode" }).selectOption("timed")
+  await page.getByRole("spinbutton", { name: "Time limit (timed only)" }).fill("1")
+  await page.getByRole("button", { name: "Start session" }).click()
+  await expect(page.getByRole("timer", { name: "Time remaining" })).toBeVisible()
+  const deadline = await page.locator("[data-deadline]").getAttribute("data-deadline")
+  await page.reload()
+  await expect(page.locator("[data-deadline]")).toHaveAttribute("data-deadline", deadline!)
+  await page.getByRole("button", { name: "Submit attempt" }).click()
+  await page.getByRole("button", { name: "Confirm submission" }).click()
+  await expect(page.getByRole("heading", { name: "Your practice result" })).toBeVisible()
   await page.getByRole("button", { name: "Sign out" }).click()
   await expect(page).toHaveURL(/\/auth$/)
   await page.goto("/dashboard")

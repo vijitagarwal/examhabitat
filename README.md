@@ -78,9 +78,9 @@ npm run test:http
 
 `test:http` starts an isolated development server on port 3101, explicitly blanks Supabase configuration, verifies four protected setup pages/cache headers and fixed callback recovery, then stops its own process. Do not run it simultaneously with another Next dev/build process in this workspace. It does not exercise client-side browser interactions.
 
-### Optional Playwright tests
+### Playwright and local integration tests
 
-Chromium is a separate prerequisite. It was unavailable during this implementation, so browser journeys have **not** been executed. Install only when you want to run them; the following keeps browser files inside the workspace's ignored dependency directory:
+Chromium is installed separately from the npm package. Keep it inside the workspace's ignored dependency directory:
 
 ```powershell
 $env:PLAYWRIGHT_BROWSERS_PATH = "$PWD\node_modules\.cache\ms-playwright"
@@ -88,7 +88,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The default browser run explicitly disables Supabase and checks setup, mobile navigation and expired-link recovery. It starts its own server on port 3100 rather than reusing an unknown process.
+The default browser run explicitly disables Supabase and checks four protected setup routes, mobile navigation, and expired-link recovery. It starts its own server on port 3100 rather than reusing an unknown process. In the current environment these two setup journeys pass with project-local Chromium.
 
 For the authenticated workflow, use a **fresh disposable account in local Supabase**, with migrations applied. Set these process environment variables locally (do not share or commit values):
 
@@ -97,7 +97,9 @@ For the authenticated workflow, use a **fresh disposable account in local Supaba
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — local project's public key
 - `CAT_E2E_EMAIL`, `CAT_E2E_PASSWORD` — disposable local test account
 
-Then run `npm run test:e2e`. The runner refuses a non-loopback Supabase URL. Test-only password login provisions the browser session; the app's sign-in remains magic-link only. The test changes the disposable student's progress/plans and verifies refresh and sign-out. Browser traces are disabled to avoid saving auth cookies. This suite has not been run against a live/local Supabase service here.
+Then run `npm run test:e2e`. The runner refuses a non-loopback Supabase URL. Test-only password login provisions the browser session; the app's sign-in remains magic-link only. The authenticated journey changes only disposable local data and verifies syllabus/progress, planning, practice answer recovery, results, mistake retry, performance visibility, timed deadline preservation, submission, and sign-out. Browser traces are disabled to avoid saving auth cookies. Docker/Supabase were unavailable in the current environment, so this authenticated path remains unverified here.
+
+See [LOCAL_INTEGRATION.md](docs/LOCAL_INTEGRATION.md) for the complete disposable Supabase, two-user isolation, browser, migration, and cleanup procedure.
 
 ## Design and data integrity
 

@@ -23,5 +23,5 @@ export function SessionTimer({ deadline, serverNow, onExpire }: { deadline: stri
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", tick) }
   }, [deadline, serverNow])
   const warning = seconds === 0 ? "Time is up. Checking the saved result." : seconds <= 60 ? "One minute or less remains." : seconds <= 300 ? "Five minutes or less remain." : ""
-  return <div className="rounded-xl border border-line bg-surface p-4"><p role="timer" aria-label="Time remaining" aria-live="off" className="font-mono text-xl">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</p><p className="text-xs text-muted">Server deadline · timer does not pause</p><p role="status" className="mt-1 text-sm font-semibold">{warning}</p></div>
+  return <div className="rounded-xl border border-line bg-surface p-4" data-deadline={deadline}><p role="timer" aria-label="Time remaining" aria-live="off" className="font-mono text-xl">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</p><p className="text-xs text-muted">Server deadline · timer does not pause</p><p role="status" className="mt-1 text-sm font-semibold">{warning}</p></div>
 }
