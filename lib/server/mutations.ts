@@ -5,6 +5,7 @@ import { mutationEnvelopeSchema, type ActionResult, type CatWorkspaceData } from
 import { decodeWorkspace, getAuthContext } from "@/lib/server/workspace"
 import type { Json } from "@/lib/supabase/database.types"
 import { formatDateInTimeZone } from "@/lib/dates"
+import { practiceSignalSchema } from "@/lib/practice"
 
 const schemas = {
   progress: mutationEnvelopeSchema.extend({ payload: topicProgressInputSchema }).strict(),
@@ -32,10 +33,13 @@ export async function executeWorkspaceMutation(operation: MutationOperation, inp
       const today = formatDateInTimeZone(new Date(), preferences.timezone)
       if (expectedRevision !== result.data.revision) return { ok: false, code: "conflict", message: "Your workspace changed in another tab. Reload before generating." }
       const existingTasks = result.data.plans.find((plan) => plan.planDate === today)?.tasks ?? []
+      const evidence = await supabase.rpc("practice_signals")
+      const signals = z.array(practiceSignalSchema).safeParse(evidence.data)
+      if (evidence.error || !signals.success) return { ok: false, code: "database", message: "Could not load practice evidence. Apply all development migrations and retry." }
       let queue
       try {
         queue = generateStudyQueue({ topics: result.data.catalog.topics, progressByTopic: new Map(result.data.progress.map((p) => [p.topicId, p])),
-          preferences, referenceDate: today, existingTasks })
+          preferences, referenceDate: today, existingTasks, practiceSignals: new Map(signals.data.map((s) => [s.topicId, s])) })
       } catch (error) {
         return { ok: false, code: "validation", message: error instanceof Error && error.message.startsWith("The budget") ? error.message : "The syllabus cannot be scheduled with these settings. Check the catalog and retry." }
       }

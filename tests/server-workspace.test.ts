@@ -67,7 +67,7 @@ describe("validated server mutations with isolated HTTP transport", () => {
   })
   it.each(["progress", "plan", "task"] as const)("preserves a failure for %s without exposing raw database diagnostics", async (operation) => {
     const payload = operation === "progress" ? progress : operation === "task" ? { taskId: envelope.requestId, status: "completed" } : { preferences: DEFAULT_STUDY_PREFERENCES }
-    if (operation === "plan") transport.mockResolvedValueOnce(response(workspaceFixture()))
+    if (operation === "plan") { transport.mockResolvedValueOnce(response(workspaceFixture())); transport.mockResolvedValueOnce(response([])) }
     transport.mockResolvedValue(response({ code: "XX000", message: "private SQL details", details: "private table" }, 500))
     const result = await executeWorkspaceMutation(operation, { ...envelope, payload })
     expect(result).toMatchObject({ ok: false, code: "database" })
@@ -79,11 +79,12 @@ describe("validated server mutations with isolated HTTP transport", () => {
   })
   it("generates a bounded real queue then saves the entire plan in one RPC", async () => {
     transport.mockResolvedValueOnce(response(workspaceFixture()))
+    transport.mockResolvedValueOnce(response([]))
     transport.mockResolvedValueOnce(response(workspaceFixture({ revision: 1 })))
     const result = await executeWorkspaceMutation("plan", { ...envelope, payload: { preferences: DEFAULT_STUDY_PREFERENCES } })
     expect(result.ok).toBe(true)
-    expect(transport).toHaveBeenCalledTimes(2)
-    const body = JSON.parse(String(transport.mock.calls[1][1]?.body))
+    expect(transport).toHaveBeenCalledTimes(3)
+    const body = JSON.parse(String(transport.mock.calls[2][1]?.body))
     expect(body.p_payload.tasks.length).toBeGreaterThan(0)
     expect(body.p_payload.tasks.reduce((sum: number, task: { plannedMinutes: number }) => sum + task.plannedMinutes, 0)).toBeLessThanOrEqual(60)
   })

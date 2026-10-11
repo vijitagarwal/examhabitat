@@ -23,7 +23,7 @@ beforeAll(async () => {
   await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema public,auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;`)
-  for (const name of ["0001_foundation", "0002_cat_syllabus_progress_plans", "0003_atomic_cat_workspace", "0004_cat_practice_engine", "0005_original_cat_practice"]) {
+  for (const name of ["0001_foundation", "0002_cat_syllabus_progress_plans", "0003_atomic_cat_workspace", "0004_cat_practice_engine", "0005_original_cat_practice", "0006_practice_aware_planning"]) {
     await db.exec(await readFile(new URL(`../supabase/migrations/${name}.sql`, import.meta.url), "utf8"))
   }
   await db.query("insert into auth.users values ($1),($2)", [A, B])

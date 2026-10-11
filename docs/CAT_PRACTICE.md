@@ -8,7 +8,7 @@ Questions reference existing syllabus topics. Shared stimuli use text and semant
 
 ## Ownership and lifecycle
 
-Apply migrations `0001` through `0005` in filename order to an isolated development Supabase project. No application script applies migrations remotely.
+Apply migrations `0001` through `0006` in filename order to an isolated development Supabase project. No application script applies migrations remotely. Migration `0006` keeps the existing planning RPC atomic while allowing the practice-aware planner algorithm version.
 
 - `practice_sets` and `practice_questions`: trusted, read-only authored bank; no direct student access to key-bearing rows.
 - `practice_attempts`: owner, request identity, configuration, mode, server start/deadline, revision and immutable finalized result.

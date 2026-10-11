@@ -28,6 +28,7 @@ export function TopicEditor({ topic, progress, revision, timezone, onSaved }: {
     <h2 id={`${id}-heading`} className="mt-2 text-2xl font-semibold tracking-tight">{topic.title}</h2>
     <p className="mt-3 leading-7 text-muted">{topic.description}</p>
     <p className="mt-3 text-sm text-muted">{topic.estimatedMinutes} minute study-block estimate · difficulty {topic.difficulty}/5</p>
+    <Button className="mt-4" variant="secondary" href={`/dashboard/practice?topicId=${encodeURIComponent(topic.id)}`}>Practise this topic</Button>
     <form onSubmit={save} className="mt-6">
       <fieldset disabled={mutation.pending} className="grid gap-4 sm:grid-cols-2">
         <legend className="sr-only">Update {topic.title}</legend>

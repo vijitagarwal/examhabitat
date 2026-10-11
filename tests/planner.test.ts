@@ -66,6 +66,16 @@ describe("deterministic study planner", () => {
     expect(result.tasks[0].topicId).toBe(topics[1].id)
   })
 
+  it("uses repeated practice mistakes as a transparent scheduling signal without changing mastery", () => {
+    const weakTopic = catTopics[0]
+    const masteredTopic = { ...catTopics[5] }
+    const result = generateStudyQueue({ topics: [masteredTopic, weakTopic], progressByTopic: progressFor([
+      { topicId: masteredTopic.id, status: "mastered", confidence: 5, reviewDueOn: "2026-12-01" },
+    ]), practiceSignals: new Map([[weakTopic.id, { topicId: weakTopic.id, attempted: 4, incorrect: 2 }]]), preferences: { ...preferences, maxTasks: 1 }, referenceDate: "2026-10-10" })
+    expect(result.tasks[0]).toMatchObject({ topicId: weakTopic.id })
+    expect(result.tasks[0].reason).toContain("minimum 3 answers")
+  })
+
   it("orders transitive prerequisites before a dependent topic without duplicates", () => {
     const topics = [catTopics[0], catTopics[1], catTopics[4]]
     const result = generateStudyQueue({ topics, progressByTopic: progressFor([{ topicId: topics[2].id, status: "needs_revision", reviewDueOn: "2026-10-01" }]), preferences: { ...preferences, dailyMinutes: 120, maxTasks: 4 }, referenceDate: "2026-10-10" })

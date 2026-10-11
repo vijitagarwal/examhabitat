@@ -65,6 +65,7 @@ function TaskCard({ task, data, onSaved }: { task: WorkspacePlanTask; data: CatW
   return <li className="rounded-xl border border-line p-4">
     <p className="text-xs font-semibold uppercase tracking-wider text-accent">{task.status.replace("_", " ")}</p>
     <h3 className="mt-2 font-semibold">{topic?.title ?? task.topicId}</h3><p className="mt-1 text-sm text-muted">{task.plannedMinutes} minute block</p><p className="mt-2 text-sm leading-6 text-muted">{task.reason}</p>
+    <Button className="mt-3" variant="secondary" href={`/dashboard/practice?topicId=${encodeURIComponent(task.topicId)}`}>Open topic practice</Button>
     {!finished && <div className="mt-4 flex flex-wrap gap-2">{task.status === "planned" && <Button disabled={mutation.pending} variant="secondary" onClick={() => change("in_progress")}>Start task</Button>}<Button disabled={mutation.pending} onClick={() => change("completed")}>Complete block</Button><Button disabled={mutation.pending} variant="ghost" onClick={() => change("skipped")}>Skip today</Button></div>}
     <MutationMessage message={mutation.message} />
   </li>

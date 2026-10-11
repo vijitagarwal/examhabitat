@@ -1,8 +1,9 @@
 import { dateSchema, daysBetween, isDateDue } from "@/lib/dates"
 import { emptyTopicProgress, studyPreferencesSchema, type StudyPreferences, type TopicProgress } from "@/lib/progress"
 import type { CatSyllabusTopic } from "@/lib/cat-syllabus"
+import { needsPractice, type PracticeSignal } from "@/lib/practice"
 
-export const PLANNER_ALGORITHM_VERSION = "cat-planner-v1"
+export const PLANNER_ALGORITHM_VERSION = "cat-planner-v2"
 
 export type PlannedStudyTask = { topicId: string; position: number; plannedMinutes: number; reason: string }
 export type PlannerResult = { algorithmVersion: string; tasks: PlannedStudyTask[]; totalMinutes: number; skippedTopics: { topicId: string; reason: string }[] }
@@ -14,6 +15,7 @@ export type PlannerInput = {
   referenceDate: string
   existingTasks?: RetainedTask[]
   excludedTopicIds?: ReadonlySet<string>
+  practiceSignals?: ReadonlyMap<string, PracticeSignal>
 }
 
 export function generateStudyQueue(input: PlannerInput): PlannerResult {
@@ -32,10 +34,12 @@ export function generateStudyQueue(input: PlannerInput): PlannerResult {
   const scores = new Map(input.topics.map((topic) => {
     const progress = progressFor(topic)
     const due = isDateDue(progress.reviewDueOn, input.referenceDate)
+    const weakPractice = needsPractice(input.practiceSignals?.get(topic.id))
     const score = (due ? 300 + Math.min(90, daysBetween(progress.reviewDueOn!, input.referenceDate)) : 0)
       + ({ not_started: 100, learning: 55, practising: 45, needs_revision: 90, mastered: 0 }[progress.status])
-      + (5 - progress.confidence) * 9 + progress.priority * 10 + topic.defaultPriority * 3
+      + (5 - progress.confidence) * 9 + progress.priority * 10 + topic.defaultPriority * 3 + (weakPractice ? 120 : 0)
     const reason = due ? "Review is due; refresh this topic before it fades."
+      : weakPractice ? "At least half of your recent answered questions in this topic were incorrect (minimum 3 answers)."
       : progress.status === "not_started" ? "Untouched foundation; start with a focused first pass."
       : progress.status === "needs_revision" ? "You marked this topic for revision."
       : progress.confidence <= 2 ? "Low saved confidence makes another pass worthwhile."
@@ -69,7 +73,7 @@ export function generateStudyQueue(input: PlannerInput): PlannerResult {
   for (const topic of ordered) {
     if (excluded.has(topic.id) || selected.has(topic.id) || tasks.length >= slots) continue
     const progress = progressFor(topic)
-    if (progress.status === "mastered" && !isDateDue(progress.reviewDueOn, input.referenceDate)) continue
+    if (progress.status === "mastered" && !isDateDue(progress.reviewDueOn, input.referenceDate) && !needsPractice(input.practiceSignals?.get(topic.id))) continue
     const sequence: CatSyllabusTopic[] = []
     try { chain(topic, new Set(), sequence) } catch (error) {
       if (error instanceof Error && error.message.startsWith("Prerequisite is")) {
