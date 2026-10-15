@@ -1,4 +1,5 @@
 node_modules/
+.opencode/
 .next/
 out/
 coverage/
