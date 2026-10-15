@@ -1,0 +1,31 @@
+/* Scoped styles for Exam Dashboard */
+.exam-shell {
+  --shell-bg: #09090b;
+  --card-bg: rgba(24, 24, 27, 0.7);
+  --card-border: rgba(39, 39, 42, 0.8);
+}
+
+.exam-theme-transition,
+.exam-theme-transition * {
+  transition: color 600ms ease, background-color 600ms ease, border-color 600ms ease, fill 600ms ease, stroke 600ms ease;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(24, 24, 27, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(30, 30, 35, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Accent Glow */
+.exam-glow {
+  box-shadow: 0 0 25px -5px var(--exam-primary, rgba(245, 158, 11, 0.3));
+}

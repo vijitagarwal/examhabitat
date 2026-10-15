@@ -1,0 +1,24 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todos.json
+
+# Local AI/editor instructions and internal project notes
+AGENTS.md
+CONTEXT_FOR_AI.md
+.cursorrules
+.cta.json
+IMPLEMENTATION_PLAN.md
+IMPLEMENTATION_PLAN1.md
+EXAMHABITAT_AUDIT.md
+PROJECT_DOSSIER.md
+.vscode/
